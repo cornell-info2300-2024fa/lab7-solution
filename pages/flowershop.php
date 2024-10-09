@@ -54,15 +54,16 @@ $sticky_values = array(
 if (isset($_POST["request-sample"])) {
 
   // Assume the form is valid
+  $form_valid = true;
 
   // Get HTTP request user data
   $form_values["name"] = trim($_POST["name"]);
-  $form_values["name"] = $form_values["name"] == " " ? NULL : $form_values["name"];
+  $form_values["name"] = $form_values["name"] == "" ? NULL : $form_values["name"];
 
   $form_values["phone"] = trim($_POST["phone"]);
   $form_values["phone"] = $form_values["phone"] == "" ? NULL : $form_values["phone"];
 
-  $form_values["bouquet"] = isset($_POST["bouqeut"]) ? (int)$_POST["bouquet"] : NULL;
+  $form_values["bouquet"] = isset($_POST["bouquet"]) ? (int)$_POST["bouquet"] : NULL;
 
   // Name is required; is the name value empty?
   // Note: Does not validate name format.
@@ -88,8 +89,38 @@ if (isset($_POST["request-sample"])) {
     $show_feedback["phone"] = True;
   }
 
+  // Bouquet is required; is the bouquet value empty?
+  // Note: Does not validate bouquet format.
+  //       For project 2 only validate: required or not required.
+  if ($form_values["bouquet"] == NULL) {
+    // no bouquet provided, it's required!
+    // form is not valid
+    $form_valid = false;
+
+    // show bouquet feedback message by removing hidden class
+    $show_feedback["bouquet"] = True;
+  }
+
   // If the form is valid, show confirmation message
   if ($form_valid) {
+
+    // load the database library
+    require_once "includes/db.php";
+
+    // open database
+    $db = open_sqlite_db("secure/site.sqlite");
+
+    // insert sample request record into database.
+    $result = exec_sql_query(
+      $db,
+      "INSERT INTO flower_samples (business_name, phone, sample_type) VALUES (:business, :phone_no, :bouquet_type);",
+      array(
+        ":business" => $form_values["name"],
+        ":phone_no" => $form_values["phone"],
+        ":bouquet_type" => $form_values["bouquet"]
+      )
+    );
+
     // form is valid, show confirmation message
     $show_confirmation_message = true;
   } else {
@@ -124,7 +155,7 @@ if (isset($_POST["request-sample"])) {
     <!-- make these connections by taking already working code and          -->
     <!-- modifying it to fit your purposes.                                 -->
 
-    <?php if ($show_confirmation_message) { ?>
+    <?php if (!$show_confirmation_message) { ?>
 
       <h2><?php echo $page_title; ?></h2>
 
@@ -134,9 +165,9 @@ if (isset($_POST["request-sample"])) {
 
       <p>Our premium quality flowers are the best in Ithaca. See the quality yourself! Use the form below to request a <em>free</em> sample bouquet of roses, daisies, or gardenias.</p>
 
-      <form method="post" action="/flowershop/confirmation" novalidate>
+      <form method="post" action="/flowershop#request" novalidate>
 
-        <?php if ($show_feedback) { ?>
+        <?php if ($show_feedback["name"]) { ?>
           <p class="feedback">Please provide your business" name.</p>
         <?php } ?>
 
@@ -145,7 +176,7 @@ if (isset($_POST["request-sample"])) {
           <input id="name_field" type="text" name="name" value="<?php echo $sticky_values["name"]; ?>">
         </div>
 
-        <?php if ($show_feedback["Phone"]) { ?>
+        <?php if ($show_feedback["phone"]) { ?>
           <p class="feedback">Please provide a contact phone number.</p>
         <?php } ?>
 
@@ -179,17 +210,21 @@ if (isset($_POST["request-sample"])) {
         </div>
 
         <div class="align-right">
-          <button type="submit">
+          <button type="submit" name="request-sample">
             Request Sample
           </button>
         </div>
       </form>
+
+    <?php } else { ?>
 
       <h2>Sample Request Confirmation</h2>
 
       <p>Thank you, <?php echo htmlspecialchars($form_values["name"]); ?>, for your request. We will contact you at <?php echo htmlspecialchars($form_values["phone"]); ?> to arrange a delivery date, time, and location for your sample <?php echo htmlspecialchars(FLOWERS[$form_values["bouquet"]]); ?> bouquet.</p>
 
       <p><a href="/flowershop">Request another sample</a>.</p>
+
+    <?php } ?>
 
   </main>
 
